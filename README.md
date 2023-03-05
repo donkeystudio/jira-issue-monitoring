@@ -150,10 +150,10 @@ CONFIG={
 ```
 **Explanation**
 
-In the above example, Project Zero will be monitored with the following rules:
-1. Monitor all issues from "Filter for PRJ 1", excluding those with status "Rejected". If number of newly created issues added into an active sprint exceeded 10% of total number of issues at the start of the sprint, alert will be triggered.
-2. Monitor all issues from "Filter for PRJ 1 - New version, excluding those with status "Closed". If there is any issue not yet resolved for more than 14 days, alert will be triggered.
-3. Monitor all issues from "Filter for PRJ 1". If there is any issue that has been rolled over to at least 4 sprints, including the current active sprint, alert will be triggered.
-4. Monitor all issues from "Filter for PRJ 1". If there is any issue of which summary contains keyword "Critical" and has not yet been resolved for more than 2 days, alert will be triggered.
+In the above example, `Project Zero` will be monitored with the following rules:
+1. Monitor all issues from `Filter for PRJ 1`, excluding those with status `Rejected`. If number of newly created issues added into an active sprint exceeded `10%` of total number of issues at the start of the sprint, alert will be triggered.
+2. Monitor all issues from `Filter for PRJ 1 - New version`, excluding those with status `Closed`. If there is any issue not yet resolved for more than `14 days`, alert will be triggered.
+3. Monitor all issues from `Filter for PRJ 1`. If there is any issue that has been rolled over to at least `4 sprints`, including the current active sprint, alert will be triggered.
+4. Monitor all issues from `Filter for PRJ 1`. If there is any issue of which summary contains keyword `Critical` and has not yet been resolved for more than `2 days`, alert will be triggered.
 
-Alert will be triggered every Monday and Thursday at 8AM and 6PM.
+Alert will be triggered every `Monday` and `Thursday` at `8AM` and `6PM`.
