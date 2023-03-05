@@ -215,7 +215,7 @@ class JIRAMonitor:
             next_schedule_time = datetime.strptime(f'{time_now.day}-{time_now.month}-{time_now.year} {sorted_hour_list[0]}:00:00', '%d-%m-%Y %H:%M:%S')+timedelta(days=sorted_day_list[0] - time_now.weekday() + 7)
 
         delay = (next_schedule_time.astimezone(pytz.utc) - time_now.astimezone(pytz.utc)).total_seconds()
-        self._logger.debug(f'Today date is:{time_now.strftime("%d-%m-%Y %H:%M")}. Next report is scheduled at:{next_schedule_time.strftime("%d-%m-%Y %H:00")}')
+        self._logger.info(f'Today date is:{time_now.strftime("%d-%m-%Y %H:%M")}. Next report is scheduled at:{next_schedule_time.strftime("%d-%m-%Y %H:00")}')
         scheduler.enter(delay,1, self.start_monitoring)
         scheduler.run()
     
