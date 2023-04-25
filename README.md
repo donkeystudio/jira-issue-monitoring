@@ -1,6 +1,7 @@
 # Jira Issue Monitoring
-Periodically monitor Jira based on certain rules. The report will be sent to the following channel(s):
-* Telegram chat.
+Periodically monitor Jira based on certain rules. There are few ways to access the report:
+* Periodically send to Telegram chat.
+* Access via API.
 
 ## List of Supported Rules
 | Rule ID | Description | Threshold Unit |
@@ -14,13 +15,14 @@ Periodically monitor Jira based on certain rules. The report will be sent to the
 Supported architectures: `linux/arm/v7`, `linux/arm64`, `linux/amd64`
 
 ## Startup Configuration
-```
+```bash
 python3 main.py --help
 usage: main.py [-h] [-conf CONFIG_FILE] [-log LOG_FILE] [-d DEBUG_LEVEL]
 
 options:
   -h,                   --help                      show this help message and exit
   -conf CONFIG_FILE,    --config_file CONFIG_FILE   Location of the application config file (default: ./config.properties)
+  -p PORT,              --port PORT                 Port of the API service (default: 8080)
   -log  LOG_FILE,       --log_file LOG_FILE         Location of the log file. Default is system log (default: None)
   -d    DEBUG_LEVEL,    --debug_level DEBUG_LEVEL   Debug Level CRITICAL/ERROR/WARNING/INFO/DEBUG. Default is WARNING (default: WARNING)
 ```
@@ -29,7 +31,7 @@ options:
 ID and API Key are encoded using Base64 encoding.
 
 ### Jira configuration section
-```
+```json
 [JIRA-API]
 CONFIG={
     "url":<Jira URL>,
@@ -42,7 +44,7 @@ CONFIG={
 ```
 
 ### Telegram configuration section
-```
+```json
 [TELEGRAM-API]
 CONFIG={
     "url":"https://api.telegram.org",
@@ -52,7 +54,7 @@ CONFIG={
 ```
 
 ### Rule monitoring configuration section
-```
+```json
 [MONITORING-RULES]
 CONFIG={
         "frequency":
@@ -66,30 +68,66 @@ CONFIG={
                 <Hours of the day to trigger the report. From 0 to 23>
             ]
         },
-        "projects":
-        [
+        "rules":
+        {
+            "projects":
+            [
+                {
+                    "id":<Project ID>,
+                    "name":<Project Name>,
+                    "rules":
+                    [
+                        {
+                            "id":<Rule ID>,
+                            "threshold": <Rule Threshold. See List of Supported Rules for threshold unit>,
+                            "filter":<Name of the filter on Jira that you want to use to monitor this rule>,
+                            "exclude_status":
+                            [
+                                <List of workflow status you want to exclude from your monitoring>
+                            ],
+                            "keyword":<Keyword to monitor. Only applicable for rule "keyword_sla">
+                        }
+                    ]
+                }
+            ]
+        },
+        "jira":
+        {
+            "config": <Required. Path to Jira configuration file.>
+        },
+        "telegram":
+        {
+            "config": <Required. Path to Telegram Config>
+        },
+        "adhoc_request":
+        {
+            "api_key":
             {
-                "id":<Project ID>,
-                "name":<Project Name>,
-                "rules":
-                [
-                    {
-                        "id":<Rule ID>,
-                        "threshold": <Rule Threshold. See List of Supported Rules for threshold unit>,
-                        "filter":<Name of the filter on Jira that you want to use to monitor this rule>,
-                        "exclude_status":
-                        [
-                            <List of workflow status you want to exclude from your monitoring>
-                        ],
-                        "keyword":<Keyword to monitor. Only applicable for rule "keyword_sla">
-                    }
-                ]
-            }
-        ]
+                "key": <Required. API Key of the service. In Base64 encoded format. Leave empty string if API Key is disabled.>,
+                "header": <Required. Header field where the API Key is stored. Leave empty string if API Key is disabled.>
+            },
+            ....
+        }
     }
 ```
-**Example**
+## API Services
+### `/report/jira`
+```http
+POST /report/jira
 ```
+Check and return a comment with a list of potential conflict pull requests.
+
+**Authentication**: API Key. Refer to [MONITORING-RULES] config section -> `adhoc_request`.
+
+**JSON Request Body**
+```json
+{
+    "project": <Optional. Project ID. String type. Contains only alphabet characters. If no project is passed, report will be generated for all configured projects.>
+}
+```
+
+**Example**
+```json
 [MONITORING-RULES]
 CONFIG={
         "frequency":
@@ -103,49 +141,80 @@ CONFIG={
                 8, 18
             ]
         },
-        "projects":
-        [
+        "rules":
+        {
+            "projects":
+            [
+                {
+                    "id":PRJ_1,
+                    "name":Project Zero,
+                    "rules":
+                    [
+                        {
+                            "id":"added_active_sprint",
+                            "threshold": 0.1,
+                            "filter":"Filter for PRJ 1",
+                            "exclude_status":
+                            [
+                                "Rejected"
+                            ]
+                        },
+                        {
+                            "id":"enquiry_sla",
+                            "threshold":14,
+                            "filter":"Filter for PRJ 1 - New version",
+                            "exclude_status":
+                            [
+                                "Closed"
+                            ]
+                        },
+                        {
+                            "id":"sprint_rollover",
+                            "threshold": 4,
+                            "filter":"Filter for PRJ 1",
+                            "exclude_status":
+                            []
+                        },
+                        {
+                            "id":"keyword_sla",
+                            "threshold": 2,
+                            "filter":"Filter for PRJ 1",
+                            "exclude_status":
+                            [],
+                            "keyword":"CRITICAL"
+                        }
+                    ]
+                }
+            ]
+        },
+        "jira":
+        {
+            "config": "./config.properties"
+        },
+        "telegram":
+        {
+            "config": "./config.properties"
+        },
+        "adhoc_request":
+        {
+            "api_key":
             {
-                "id":PRJ_1,
-                "name":Project Zero,
-                "rules":
-                [
+                "key": "MTIzMzQ1Ng==", //123456
+                "header": "APIKey"
+            },
+            "request_schema":
+            {
+                "type" : "object",
+                "properties" :
+                {
+                    "project":
                     {
-                        "id":"added_active_sprint",
-                        "threshold": 0.1,
-                        "filter":"Filter for PRJ 1",
-                        "exclude_status":
-                        [
-                            "Rejected"
-                        ]
-                    },
-                    {
-                        "id":"enquiry_sla",
-                        "threshold":14,
-                        "filter":"Filter for PRJ 1 - New version",
-                        "exclude_status":
-                        [
-                            "Closed"
-                        ]
-                    },
-                    {
-                        "id":"sprint_rollover",
-                        "threshold": 4,
-                        "filter":"Filter for PRJ 1",
-                        "exclude_status":
-                        []
-                    },
-                    {
-                        "id":"keyword_sla",
-                        "threshold": 2,
-                        "filter":"Filter for PRJ 1",
-                        "exclude_status":
-                        [],
-                        "keyword":"CRITICAL"
+                        "type" : "string",
+                        "pattern": "^([A-Za-z])+$"
                     }
-                ]
+                }
             }
-        ]
+        }
     }
 ```
 **Explanation**
@@ -156,4 +225,6 @@ In the above example, `Project Zero` will be monitored with the following rules:
 3. Monitor all issues from `Filter for PRJ 1`. If there is any issue that has been rolled over to at least `4 sprints`, including the current active sprint, alert will be triggered.
 4. Monitor all issues from `Filter for PRJ 1`. If there is any issue of which summary contains keyword `Critical` and has not yet been resolved for more than `2 days`, alert will be triggered.
 
-Alert will be triggered every `Monday` and `Thursday` at `8AM` and `6PM`.
+Delivery of the report:
+* Alert will be triggered every `Monday` and `Thursday` at `8AM` and `6PM`.
+* Accesible via http://localhost:8080/report/jira with API Key with header field `APIKey` and key `123456` 

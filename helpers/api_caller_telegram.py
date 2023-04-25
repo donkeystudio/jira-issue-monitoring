@@ -9,9 +9,9 @@ class APICallerTelegram(APICaller):
 
 
     ########## Specific calls to Telegram API ##########
-    def send_telegram_message (self, message:str):
+    def send_telegram_message (self, message:str, chat_id=None):
         json_body = {
-            "chat_id": utils.base64_decode(self._config.chat_id),
+            "chat_id": utils.base64_decode(chat_id) if chat_id is not None else utils.base64_decode(self._config.chat_id),
             "text": message,
             "parse_mode" : "markdown"
         }

@@ -1,12 +1,14 @@
 from configparser import ConfigParser
 from datetime import datetime, timedelta
-from helpers.api_caller_jira import APICallerJIRA
 from helpers.api_caller_telegram import APICallerTelegram
+from helpers.api_caller_jira import APICallerJIRA
 import helpers.utils as utils
 import logging
 import sched
 import time
 import pytz
+from server.end_points.request_report import RequestReport
+from server.api_server import APIServer
 
 
 class JIRAMonitor:
@@ -31,20 +33,20 @@ class JIRAMonitor:
     time_scheduler  = sched.scheduler(time.time, time.sleep)
     scheduler_list  = []
     
-    def __init__(self, config_file:str, jira_config_file:str, telegram_config_file:str) -> None:
+    
+    def __init__(self, config_file:str) -> None:
         config_parser = ConfigParser()
         config_parser.read(config_file)
 
         try:
             if config_parser.has_option(self.SECTION, self.CONFIG_KEY):
                 self._config = utils.json_to_object(config_parser.get(self.SECTION, self.CONFIG_KEY))
+                self._telegram_api_caller   = APICallerTelegram(self._config.telegram.config)
+                self._jira_api_caller   = APICallerJIRA(self._config.jira.config)
             else:
                 self._logger.fatal(f"CONFIG is NOT found under {self.SECTION} section")
         except:
             self._logger.fatal("Configuration setup failed!")
-
-        self._jira_api_caller       = APICallerJIRA(jira_config_file)
-        self._telegram_api_caller   = APICallerTelegram(telegram_config_file)
 
 
     def check_active_sprint(self, rule_config):
@@ -154,12 +156,15 @@ class JIRAMonitor:
             return message
 
         return None
-        
+    
 
-    def start_monitoring(self):
+    def generate_report(self, project_id = None):
         message = ""
         
-        for project_config in self._config.projects:
+        for project_config in self._config.rules.projects:
+            if project_id is not None and project_id != project_config.id:
+                continue
+
             project_name = project_config.name
             status_messages = []
             for rule_config in project_config.rules:
@@ -178,7 +183,7 @@ class JIRAMonitor:
                 status_messages = [status for status in status_messages if status is not None]
 
                 if len(status_messages) == 0:
-                    message += "Everything is good.\n"
+                    message += "Everything looks good.\n"
                 else:
                     for status in status_messages:
                         message += f'- {status}\n'
@@ -186,7 +191,15 @@ class JIRAMonitor:
         if len(message) > 0:
             header_message = f'JIRA REPORT _({datetime.today().strftime("%d/%m/%Y")})_\n' \
                                 "=====================\n"
-            self._telegram_api_caller.send_telegram_message(header_message + message)
+            return header_message + message
+        
+        return message
+
+    def start_monitoring(self):
+        message = self.generate_report()
+        
+        if message:
+            self._telegram_api_caller.send_telegram_message(message)
 
         #Schedule for the next reprt
         self.scheduler_list.append(self.time_scheduler)
@@ -238,3 +251,9 @@ class JIRAMonitor:
         #Start Monitoring
         self.monitor_scheduler()
     
+
+    def start_api_server(self, port, log_level):
+        request_report = RequestReport([self._config.adhoc_request, self.generate_report])
+        server = APIServer("Jira Report API Server")
+        server.add_resource(request_report, '/report/jira', [self._config.adhoc_request, self.generate_report])
+        server.start('0.0.0.0', port, debug=log_level.upper()==logging.getLevelName(logging.DEBUG))
