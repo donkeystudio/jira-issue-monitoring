@@ -74,11 +74,23 @@ class JIRAMonitor:
         if sprint_start_date is not None:
             jql = f'filter = \"{rule_config.filter}\" {jql_exclude_status} and sprint in openSprints() and createdDate > {sprint_start_date}'
             
-            search_issue_added_after_sprint = self._jira_api_caller.do_jira_search(jql, 0, 0)
+            search_issue_added_after_sprint = self._jira_api_caller.do_jira_search(jql, 200, 0, ["issuetype"])
+            total_per_types = {}
+            for issue in search_issue_added_after_sprint.issues:
+                issue_type = issue.fields.issuetype.name
+                total = total_per_types.get(issue_type)
+                if total == None:
+                    total_per_types[issue_type] = 1
+                else:
+                    total_per_types[issue_type] = total + 1
+
             total_issue_added_after_sprint  = search_issue_added_after_sprint.total
             
             if total_issue_added_after_sprint >= total_issue_in_sprint * rule_config.threshold:
-                return f'Number of newly added issues after the start of sprint [{sprint_name}]({self._jira_api_caller.create_jira_sprint_link(sprint_id)}) has exceeded {rule_config.threshold * 100}%. Total Issues at start of the sprint: {total_issue_in_sprint-total_issue_added_after_sprint}. Total newly added issues: {total_issue_added_after_sprint}.'
+                output = f'Number of newly added tickets after the start of sprint [{sprint_name}]({self._jira_api_caller.create_jira_sprint_link(sprint_id)}) has exceeded {rule_config.threshold * 100}%. Total tickets at start of the sprint: {total_issue_in_sprint-total_issue_added_after_sprint}. Total newly added tickets: {total_issue_added_after_sprint}, which comprise of '
+                type_detail = [f'{total_per_types[type]} {type}(s)' for type in total_per_types]
+                output += ', '.join(type_detail)
+                return output
         
         return None
 
