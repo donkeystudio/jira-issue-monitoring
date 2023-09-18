@@ -23,7 +23,7 @@ class APICallerJIRA(APICaller):
     ########## Specific calls to Jira REST API ##########
     def do_jira_search (self, jql:str, max:int, start=0, fields = []):
         
-        mapped_fields = [getattr(self._config.field_mapping, key) for key in fields if len(key) > 0]
+        mapped_fields = [getattr(self._config.field_mapping, key) if len(key) > 0 and hasattr(self._config.field_mapping, key) else key for key in fields]
         
         if len(mapped_fields) == 0:
             mapped_fields.append("")

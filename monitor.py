@@ -88,7 +88,7 @@ class JIRAMonitor:
             
             if total_issue_added_after_sprint >= total_issue_in_sprint * rule_config.threshold:
                 output = f'Number of newly added tickets after the start of sprint [{sprint_name}]({self._jira_api_caller.create_jira_sprint_link(sprint_id)}) has exceeded {rule_config.threshold * 100}%. Total tickets at start of the sprint: {total_issue_in_sprint-total_issue_added_after_sprint}. Total newly added tickets: {total_issue_added_after_sprint}, which comprise of '
-                type_detail = [f'{total_per_types[type]} {type}, ' for type in total_per_types]
+                type_detail = [f'{total_per_types[type]} {type}(s)' for type in total_per_types]
                 output += ', '.join(type_detail)
                 return output
         
